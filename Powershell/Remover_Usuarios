@@ -1,0 +1,59 @@
+# Script criado por : Luiz Pasqualetto
+# 
+# Carrega o módulo Active Directory para o Windows PowerShell
+Import-Module ActiveDirectory
+
+# Obtém o caminho para o diretório onde o script está localizado
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# Combina o diretório do script com o nome do arquivo
+$filePath = Join-Path $scriptDir "users.txt"
+
+# Verifica se o arquivo existe
+if (Test-Path $filePath) {
+    # Lê os IDs de usuário do arquivo
+    $userIDs = Get-Content $filePath
+
+    # Obtém a data atual para incluir no nome do arquivo de saída
+    $currentDate = Get-Date -Format "yyyy_MM_dd"
+
+    # Cria um caminho de pasta para o arquivo de saída (dentro da pasta "Logs")
+    $logsFolder = Join-Path $scriptDir "Logs"
+    $outputFilePath = Join-Path $logsFolder "UsuariosDesativados_$currentDate.txt"
+
+    # Garante que a pasta "Logs" exista; cria se não existir
+    if (-not (Test-Path $logsFolder)) {
+        New-Item -ItemType Directory -Path $logsFolder
+    }
+
+    # Initialize an array to store the deactivated users
+    $deactivatedUsers = @()
+
+    # Inicializa um array para armazenar os usuários desativados
+    foreach ($userID in $userIDs) {
+        # Percorre os IDs de usuário e encontra os usuários
+        $user = Get-ADUser -LDAPFilter "(telephoneNumber=$userID)" -Properties SamAccountName
+
+        if ($user) {
+            # Adiciona o nome de logon do usuário ao array de usuários desativados
+            $deactivatedUsers += "Usuario desativado: $($user.SamAccountName)"
+
+            # Move o usuário para a OU "DESATIVADOS" dentro do DC escolhido
+            Move-ADObject -Identity $user.DistinguishedName -TargetPath "OU="DESATIVADOS",DC="DOMINIO",DC="FINAL"" -ErrorAction SilentlyContinue
+
+            # Desativa o usuário (você pode modificar esta parte com base no seu processo de desativação)
+            # Por exemplo, você pode desabilitar a conta
+            Disable-ADAccount -Identity $user.SamAccountName
+        }
+    }
+
+    if ($deactivatedUsers.Count -gt 0) {
+        # Salva os resultados no arquivo de saída
+        $deactivatedUsers | Out-File -FilePath $outputFilePath
+        Write-Host "Resultados escritos para o arquivo $outputFilePath"
+    } else {
+        Write-Host "No users with IDs found. Output file not created."
+    }
+} else {
+    Write-Host "Arquivo nao encontrado: $filePath"
+}

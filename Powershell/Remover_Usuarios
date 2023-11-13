@@ -1,12 +1,13 @@
 # Script criado por : Luiz Pasqualetto
-# 
+# Esse script Puxa os usuarios do AD e compara o telefone listado dentro do arquivo users.txt com os telefones cadastrados nos usuarios
+# Desativa todos os usuarios encontrados com o telefone igual aos telefones listados no arquivo users.txt
 # Carrega o módulo Active Directory para o Windows PowerShell
 Import-Module ActiveDirectory
 
 # Obtém o caminho para o diretório onde o script está localizado
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# Combina o diretório do script com o nome do arquivo
+# Combina o diretório do script com o nome do arquivo (que deve estar dentro do diretório)
 $filePath = Join-Path $scriptDir "users.txt"
 
 # Verifica se o arquivo existe
@@ -22,7 +23,8 @@ if (Test-Path $filePath) {
     $outputFilePath = Join-Path $logsFolder "UsuariosDesativados_$currentDate.txt"
 
     # Garante que a pasta "Logs" exista; cria se não existir
-    if (-not (Test-Path $logsFolder)) {
+    if (-not (Test-Path $logsFolder)) 
+    {
         New-Item -ItemType Directory -Path $logsFolder
     }
 
@@ -30,11 +32,13 @@ if (Test-Path $filePath) {
     $deactivatedUsers = @()
 
     # Inicializa um array para armazenar os usuários desativados
-    foreach ($userID in $userIDs) {
+    foreach ($userID in $userIDs) 
+    {
         # Percorre os IDs de usuário e encontra os usuários
         $user = Get-ADUser -LDAPFilter "(telephoneNumber=$userID)" -Properties SamAccountName
 
-        if ($user) {
+        if ($user) 
+        {
             # Adiciona o nome de logon do usuário ao array de usuários desativados
             $deactivatedUsers += "Usuario desativado: $($user.SamAccountName)"
 
@@ -47,13 +51,15 @@ if (Test-Path $filePath) {
         }
     }
 
-    if ($deactivatedUsers.Count -gt 0) {
+    if ($deactivatedUsers.Count -gt 0) 
+    {
         # Salva os resultados no arquivo de saída
         $deactivatedUsers | Out-File -FilePath $outputFilePath
         Write-Host "Resultados escritos para o arquivo $outputFilePath"
     } else {
         Write-Host "No users with IDs found. Output file not created."
     }
-} else {
+} else 
+    {
     Write-Host "Arquivo nao encontrado: $filePath"
 }

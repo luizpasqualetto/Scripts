@@ -42,7 +42,7 @@ if (Test-Path $filePath) {
             # Adiciona o nome de logon do usuário ao array de usuários desativados
             $deactivatedUsers += "Usuario desativado: $($user.SamAccountName)"
 
-            # Move o usuário para a OU "DESATIVADOS" dentro do DC escolhido
+            # Move o usuário para a OU "DESATIVADOS" dentro do DC escolhido subistituindo os valores "DOMINIO" e "FINAL" pelos valores do seu AD
             Move-ADObject -Identity $user.DistinguishedName -TargetPath "OU="DESATIVADOS",DC="DOMINIO",DC="FINAL"" -ErrorAction SilentlyContinue
 
             # Desativa o usuário (você pode modificar esta parte com base no seu processo de desativação)

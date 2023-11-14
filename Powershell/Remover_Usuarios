@@ -1,13 +1,13 @@
-# Script criado por : Luiz Pasqualetto
-# Esse script Puxa os usuarios do AD e compara o telefone listado dentro do arquivo users.txt com os telefones cadastrados nos usuarios
-# Desativa todos os usuarios encontrados com o telefone igual aos telefones listados no arquivo users.txt
+# Script created by: Luiz Pasqualetto
+# 
 # Carrega o módulo Active Directory para o Windows PowerShell
+
 Import-Module ActiveDirectory
 
 # Obtém o caminho para o diretório onde o script está localizado
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# Combina o diretório do script com o nome do arquivo (que deve estar dentro do diretório)
+# Combina o diretório do script com o nome do arquivo
 $filePath = Join-Path $scriptDir "users.txt"
 
 # Verifica se o arquivo existe
@@ -23,27 +23,36 @@ if (Test-Path $filePath) {
     $outputFilePath = Join-Path $logsFolder "UsuariosDesativados_$currentDate.txt"
 
     # Garante que a pasta "Logs" exista; cria se não existir
-    if (-not (Test-Path $logsFolder)) 
-    {
+    if (-not (Test-Path $logsFolder)) {
         New-Item -ItemType Directory -Path $logsFolder
     }
 
-    # Initialize an array to store the deactivated users
+    # Inicializa um array para armazenar os usuários desativados
     $deactivatedUsers = @()
 
-    # Inicializa um array para armazenar os usuários desativados
-    foreach ($userID in $userIDs) 
-    {
+    # Inicializa a barra de progresso
+    $progressParams = @{
+        Activity = "Processando Usuários"
+        Status = "Inicializando"
+        PercentComplete = 0
+    }
+    $progress = Write-Progress @progressParams
+
+    foreach ($userID in $userIDs) {
+        # Atualiza a barra de progresso
+        $progressParams.PercentComplete = ($progressParams.PercentComplete + 1) * 100 / $userIDs.Count
+        $progressParams.Status = "Processando $userID"
+        Write-Progress @progressParams
+
         # Percorre os IDs de usuário e encontra os usuários
         $user = Get-ADUser -LDAPFilter "(telephoneNumber=$userID)" -Properties SamAccountName
 
-        if ($user) 
-        {
+        if ($user) {
             # Adiciona o nome de logon do usuário ao array de usuários desativados
-            $deactivatedUsers += "Usuario desativado: $($user.SamAccountName)"
+            $deactivatedUsers += "Usuário desativado: $($user.SamAccountName)"
 
-            # Move o usuário para a OU "DESATIVADOS" dentro do DC escolhido subistituindo os valores "DOMINIO" e "FINAL" pelos valores do seu AD
-            Move-ADObject -Identity $user.DistinguishedName -TargetPath "OU="DESATIVADOS",DC="DOMINIO",DC="FINAL"" -ErrorAction SilentlyContinue
+            # Move o usuário para a OU "DESATIVADOS"
+            Move-ADObject -Identity $user.DistinguishedName -TargetPath "OU=DESATIVADOS,DC=confianca,DC=corp" -ErrorAction SilentlyContinue
 
             # Desativa o usuário (você pode modificar esta parte com base no seu processo de desativação)
             # Por exemplo, você pode desabilitar a conta
@@ -51,15 +60,19 @@ if (Test-Path $filePath) {
         }
     }
 
-    if ($deactivatedUsers.Count -gt 0) 
-    {
+    # Fecha a barra de progresso
+    Write-Progress -Activity "Processando Usuários" -Status "Completo" -Completed
+
+    if ($deactivatedUsers.Count -gt 0) {
         # Salva os resultados no arquivo de saída
         $deactivatedUsers | Out-File -FilePath $outputFilePath
         Write-Host "Resultados escritos para o arquivo $outputFilePath"
     } else {
-        Write-Host "No users with IDs found. Output file not created."
+        Write-Host "Nenhum usuário com IDs encontrados. Arquivo de saída não criado."
     }
-} else 
-    {
-    Write-Host "Arquivo nao encontrado: $filePath"
+
+    # Aguarda a entrada do usuário
+    Read-Host "Pressione Enter para sair..."
+} else {
+    Write-Host "Arquivo não encontrado: $filePath"
 }

@@ -39,7 +39,7 @@ if (Test-Path $filePath) {
 
     foreach ($userID in $userIDs) {
         # Atualiza a barra de progresso
-        $progressParams.PercentComplete = ($progressParams.PercentComplete + 1) * 100 / $userIDs.Count
+        $progressParams.PercentComplete = [math]::Min([math]::Max(0, $progressParams.PercentComplete + 100 / $userIDs.Count), 100)
         $progressParams.Status = "Processando $userID"
         Write-Progress @progressParams
 
